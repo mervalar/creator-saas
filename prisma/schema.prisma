@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  channels   Channel[]
+  shorts     Short[]
+  schedules  Schedule[]
+  aiJobs     AiJob[]
+
+  @@map("users")
+}
+
+// Auth.js account model (Google OAuth tokens)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── Creator Channels ──────────────────────────────────────────────────────
+
+model Channel {
+  id           String    @id @default(cuid())
+  userId       String
+  platform     Platform
+  platformId   String
+  name         String?
+  thumbnailUrl String?
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  podcasts  Podcast[]
+  analytics Analytics[]
+
+  @@unique([userId, platform])
+  @@map("channels")
+}
+
+// ─── Content ────────────────────────────────────────────────────────────────
+
+model Podcast {
+  id        String    @id @default(cuid())
+  channelId String
+  title     String
+  uploadUrl String
+  duration  Int       @default(0) // seconds
+  status    JobStatus @default(PENDING)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  shorts  Short[]
+  aiJobs  AiJob[]
+
+  @@map("podcasts")
+}
+
+model Short {
+  id        String    @id @default(cuid())
+  podcastId String
+  userId    String
+  title     String?
+  hashtags  String[]
+  startTime Int       // seconds from start
+  endTime   Int
+  clipUrl   String?
+  status    JobStatus @default(PENDING)
+  createdAt DateTime  @default(now())
+
+  podcast   Podcast    @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id])
+  schedules Schedule[]
+
+  @@map("shorts")
+}
+
+// ─── Scheduling ─────────────────────────────────────────────────────────────
+
+model Schedule {
+  id          String     @id @default(cuid())
+  userId      String
+  shortId     String
+  platform    Platform
+  scheduledAt DateTime
+  status      PostStatus @default(SCHEDULED)
+  n8nJobId    String?
+  createdAt   DateTime   @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  short Short @relation(fields: [shortId], references: [id], onDelete: Cascade)
+
+  @@map("schedules")
+}
+
+// ─── Analytics ──────────────────────────────────────────────────────────────
+
+model Analytics {
+  id          String   @id @default(cuid())
+  channelId   String
+  date        DateTime @db.Date
+  views       Int      @default(0)
+  subscribers Int      @default(0)
+  likes       Int      @default(0)
+  comments    Int      @default(0)
+  shares      Int      @default(0)
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, date])
+  @@map("analytics")
+}
+
+// ─── AI Jobs ────────────────────────────────────────────────────────────────
+
+model AiJob {
+  id        String    @id @default(cuid())
+  userId    String
+  podcastId String?
+  type      AiJobType
+  status    JobStatus @default(PENDING)
+  result    Json?
+  error     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  podcast Podcast? @relation(fields: [podcastId], references: [id], onDelete: SetNull)
+
+  @@map("ai_jobs")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum Platform {
+  YOUTUBE
+  TIKTOK
+  INSTAGRAM
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum PostStatus {
+  SCHEDULED
+  POSTED
+  FAILED
+  CANCELLED
+}
+
+enum AiJobType {
+  TRANSCRIPTION
+  CLIP_DETECTION
+  TITLE_GEN
+  HASHTAG_GEN
+}
