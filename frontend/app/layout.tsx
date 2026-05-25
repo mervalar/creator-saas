@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Geist_Mono } from 'next/font/google'
+import { SessionProvider } from '@/components/providers/SessionProvider'
 import './globals.css'
 
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
@@ -27,7 +28,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${inter.variable} ${geistMono.variable} dark`}>
-      <body className="noise min-h-screen bg-[#0B0F1A] text-[#F9FAFB] antialiased">{children}</body>
+      <body className="noise min-h-screen bg-[#0B0F1A] text-[#F9FAFB] antialiased">
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   )
 }
