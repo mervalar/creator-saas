@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+import { useSession } from 'next-auth/react'
 import { Bell, Search, Sparkles } from 'lucide-react'
 
 type DashboardTopbarProps = {
@@ -8,6 +10,18 @@ type DashboardTopbarProps = {
 }
 
 export function DashboardTopbar({ title, subtitle }: DashboardTopbarProps) {
+  const { data: session } = useSession()
+  const user = session?.user
+
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'U'
+
   return (
     <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-white/[0.06] bg-[#0B0F1A]/80 px-6 backdrop-blur-sm">
       {/* Title */}
@@ -40,9 +54,19 @@ export function DashboardTopbar({ title, subtitle }: DashboardTopbarProps) {
         </button>
 
         {/* Avatar */}
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#7C3AED]/20 text-sm font-bold text-[#a78bfa]">
-          U
-        </div>
+        {user?.image ? (
+          <Image
+            src={user.image}
+            alt={user.name ?? 'Avatar'}
+            width={32}
+            height={32}
+            className="rounded-full object-cover ring-2 ring-[#7C3AED]/30"
+          />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#7C3AED]/20 text-xs font-bold text-[#a78bfa]">
+            {initials}
+          </div>
+        )}
       </div>
     </header>
   )

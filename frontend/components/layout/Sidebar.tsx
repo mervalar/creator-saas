@@ -2,16 +2,10 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import {
-  LayoutDashboard,
-  Film,
-  CalendarCheck,
-  Mic2,
-  ChevronLeft,
-  Settings,
-  LogOut,
-} from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
+import { LayoutDashboard, Film, CalendarCheck, Mic2, Settings, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -20,8 +14,39 @@ const navItems = [
   { icon: CalendarCheck, label: 'Publication', href: '/posting', emoji: '📅' },
 ]
 
+function UserAvatar({ image, name }: { image?: string | null; name?: string | null }) {
+  const initials = name
+    ? name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'U'
+
+  if (image) {
+    return (
+      <Image
+        src={image}
+        alt={name ?? 'Avatar'}
+        width={32}
+        height={32}
+        className="rounded-full object-cover"
+      />
+    )
+  }
+
+  return (
+    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#7C3AED]/30 text-xs font-bold text-[#a78bfa]">
+      {initials}
+    </div>
+  )
+}
+
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const user = session?.user
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-white/[0.06] bg-[#0B0F1A]">
@@ -35,9 +60,6 @@ export function Sidebar() {
             AI Podcast <span className="text-[#7C3AED]">Team</span>
           </span>
         </Link>
-        <button className="rounded-lg p-1.5 text-[#94A3B8] transition-colors hover:bg-white/5 hover:text-[#F9FAFB]">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
       </div>
 
       {/* Status */}
@@ -87,10 +109,26 @@ export function Sidebar() {
           <Settings className="h-4 w-4" />
           Paramètres
         </button>
-        <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#94A3B8] transition-colors hover:bg-white/[0.04] hover:text-[#EF4444]">
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#94A3B8] transition-colors hover:bg-white/[0.04] hover:text-[#EF4444]"
+        >
           <LogOut className="h-4 w-4" />
           Déconnexion
         </button>
+
+        {/* User profile */}
+        {user && (
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+            <UserAvatar image={user.image} name={user.name} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-[#F9FAFB]">
+                {user.name ?? 'Utilisateur'}
+              </p>
+              <p className="truncate text-[10px] text-[#94A3B8]">{user.email}</p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   )
